@@ -7,23 +7,24 @@ define orawls::domain (
   $weblogic_home_dir          = hiera('wls_weblogic_home_dir'     , undef), # /opt/oracle/middleware11gR1/wlserver_103
   $middleware_home_dir        = hiera('wls_middleware_home_dir'   , undef), # /opt/oracle/middleware11gR1
   $jdk_home_dir               = hiera('wls_jdk_home_dir'          , undef), # /usr/java/jdk1.7.0_45
-  $domain_template            = hiera("domain_template"           , "standard"), # adf|osb|osb_soa_bpm|osb_soa|soa_bpm
+  $domain_template            = "standard",                                 # adf|osb|osb_soa_bpm|osb_soa|soa|soa_bpm
   $domain_name                = hiera('domain_name'               , undef),
-  $development_mode           = hiera('development_mode'          , false),
+  $development_mode           = true,
   $adminserver_name           = hiera('domain_adminserver'        , "AdminServer"),
   $adminserver_address        = hiera('domain_adminserver_address', "localhost"),
   $adminserver_port           = hiera('domain_adminserver_port'   , 7001),
   $nodemanager_port           = hiera('domain_nodemanager_port'   , 5556),
   $weblogic_user              = hiera('wls_weblogic_user'         , "weblogic"),
-  $weblogic_password          = hiera('domain_wls_password'       , "welcome1"),
+  $weblogic_password          = hiera('domain_wls_password'       , undef),
   $os_user                    = hiera('wls_os_user'               , undef), # oracle
   $os_group                   = hiera('wls_os_group'              , undef), # dba
   $download_dir               = hiera('wls_download_dir'          , undef), # /data/install
   $log_dir                    = hiera('wls_log_dir'               , undef), # /data/logs
-  $log_output                 = hiera('log_output'                , false),  # true|false
+  $log_output                 = false, # true|false
   $repository_database_url    = hiera('repository_database_url'   , undef), #jdbc:oracle:thin:@192.168.50.5:1521:XE
   $repository_prefix          = hiera('repository_prefix'         , "DEV"),
-  $repository_password        = hira('repository_password'        , "oracle"),
+  $repository_password        = hiera('repository_password'       , "Welcome01"),
+)
 {
   $domain_dir = "${middleware_home_dir}/user_projects/domains"
   $app_dir    = "${middleware_home_dir}/user_projects/applications"
@@ -112,23 +113,27 @@ define orawls::domain (
       $templateFile  = "orawls/domains/domain_osb.py.erb"
       $wlstPath      = "${middleware_home_dir}/Oracle_OSB1/common/bin"
 
-    } elsif $domain_template == 'osb_soa' {
-      $templateFile  = "orawls/domains/domain_osb_soa.py.erb"
+    } elsif $domain_template == 'osb_soa' or $domain_template == 'osb_soa_bpm' {
+      $templateFile  = "orawls/domains/domain_osb_soa_bpm.py.erb"
       $wlstPath      = "${middleware_home_dir}/Oracle_SOA1/common/bin"
+      if $domain_template == 'osb_soa' {
+        $bpm           = false
+      } elsif $domain_template == 'osb_soa_bpm'  {
+        $bpm           = true
+      }
+
+    } elsif $domain_template == 'soa' or $domain_template == 'soa_bpm' {
+      $templateFile  = "orawls/domains/domain_soa_bpm.py.erb"
+      $wlstPath      = "${middleware_home_dir}/Oracle_SOA1/common/bin"
+      if $domain_template == 'soa' {
+        $bpm           = false
+      } elsif $domain_template == 'soa_bpm'  {
+        $bpm           = true
+      }
 
     } elsif $domain_template == 'adf' {
       $templateFile  = "orawls/domains/domain_adf.py.erb"
       $wlstPath      = "${middleware_home_dir}/oracle_common/common/bin"
-
-    } elsif $domain_template == 'osb_soa_bpm' {
-      $templateFile  = "orawls/domains/domain_osb_soa_bpm.py.erb"
-      $wlstPath      = "${middleware_home_dir}/Oracle_SOA1/common/bin"
-
-    #mdb add
-
-    } elsif $domain_template == 'soa_bpm' {
-      $templateFile  = "orawls/domains/domain_soa_bpm.py.erb"
-      $wlstPath      = "${middleware_home_dir}/Oracle_SOA1/common/bin"
 
     } else {
       $templateFile   = "orawls/domains/domain.py.erb"

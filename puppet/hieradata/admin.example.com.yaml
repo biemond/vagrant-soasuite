@@ -23,9 +23,9 @@ domain_instances:
      domain_template:          "soa_bpm"
      development_mode:         true
      log_output:               *logoutput
-     repository_database_url: "jdbc:oracle:thin:@192.168.50.5:1521:XE"
-     repository_prefix:       "DEV"
-     repository_password:     "oracle"
+     repository_database_url:  "jdbc:oracle:thin:@192.168.50.5:1521:XE"
+     repository_prefix:        "DEV"
+     repository_password:      "oracle"
 
 
 
@@ -106,7 +106,7 @@ cluster_instances:
         - "clusterNodes     = 'wlsServer1,wlsServer2'"
 
 # create filepersistence location for the jms servers
-#file_persistence_instances:
+file_persistence_instances:
 #  'filePersistenceNode1':
 #     log_output:           *logoutput
 #     weblogic_type:        "filestore"
@@ -129,7 +129,7 @@ cluster_instances:
 
 
 # create jms servers with a server,file persistence target
-#jms_servers_instances:
+jms_servers_instances:
 #   'jmsServerNode1':
 #      log_output:           *logoutput
 #      weblogic_type:        "jmsserver"
@@ -155,7 +155,7 @@ cluster_instances:
 
 # #
 # # create jms module for cluster 
-# jms_module_instances:
+jms_module_instances:
 #   'jmsClusterModule':
 #      log_output:           *logoutput
 #      weblogic_type:        "jmsmodule"
@@ -167,7 +167,7 @@ cluster_instances:
 #         - "jmsModuleName    = 'jmsClusterModule'"
 
 # # create jms subdeployment for the jms module 
-# jms_module_subdeployments_instances:
+jms_module_subdeployments_instances:
 #   'SubDeploymentWLSforJmsModule':
 #      log_output:           *logoutput
 #      weblogic_type:        "jmssubdeployment"
@@ -190,7 +190,7 @@ cluster_instances:
 #         - "jmsModuleName    = 'jmsClusterModule'"
 
 # # create jms quotas for the jms module 
-# jms_module_quotas_instances:
+jms_module_quotas_instances:
 #   'QuotaBigforJmsModule':
 #      log_output:           *logoutput
 #      weblogic_type:        "jmsquota"
@@ -217,7 +217,7 @@ cluster_instances:
 #         - "policy           = 'FIFO'"
 
 # # create jms connection factory for jms module  
-# jms_module_cf_instances:
+jms_module_cf_instances:
 #   'createJmsConnectionFactoryforJmsModule':
 #      log_output:           *logoutput
 #      weblogic_type:        "jmsobject"
@@ -231,7 +231,7 @@ cluster_instances:
 #         - "transacted        = 'false'"
 #         - "timeout           = 'xxxx'"
 
-# jms_module_jms_errors_instances:
+jms_module_jms_errors_instances:
 #   'createJmsErrorQueueforJmsModule':
 #      log_output:           *logoutput
 #      weblogic_type:        "jmsobject"
@@ -251,7 +251,7 @@ cluster_instances:
 #         - "errorObject       = 'xxxxx'"
 
 # # create jms objects for jms module  
-# jms_module_jms_instances:
+jms_module_jms_instances:
 #   'createJmsQueueforJmsModule':
 #      log_output:           *logoutput
 #      weblogic_type:        "jmsobject"

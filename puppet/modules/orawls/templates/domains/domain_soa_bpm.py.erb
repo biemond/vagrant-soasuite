@@ -1,4 +1,3 @@
-#mdb add
 WLHOME='<%= @weblogic_home_dir %>'
 DOMAIN_PATH='<%= @domain_dir %>/<%= @domain_name %>'
 DOMAIN='<%= @domain_name %>'
@@ -22,6 +21,8 @@ BAM_JAVA_ARGUMENTS='-XX:PermSize=512m -XX:MaxPermSize=512m -Xms1024m -Xmx1024m -
 SOA_REPOS_DBURL='<%= @repository_database_url %>'
 SOA_REPOS_DBUSER_PREFIX='<%= @repository_prefix %>'
 SOA_REPOS_DBPASSWORD='<%= @repository_password %>'
+
+BPM_ENABLED=<%= @bpm %>
 
 def createBootPropertiesFile(directoryPath,fileName, username, password):
   serverDir = File(directoryPath)
@@ -132,10 +133,9 @@ addTemplate('<%= @templateWSMPM %>')
 addTemplate('<%= @templateSOA %>')
 addTemplate('<%= @templateBAM %>')
 
-
-print 'Adding BPM Template'
-addTemplate('<%= @templateBPM %>')
-
+if BPM_ENABLED == true:
+  print 'Adding BPM Template'
+  addTemplate('<%= @templateBPM %>')
 
 print 'Adding EM Template'
 addTemplate('<%= @templateEM %>')
