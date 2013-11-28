@@ -32,6 +32,7 @@ Orawls WebLogic Features
 - create Persistence Store
 - create JMS Server, Module, SubDeployment, Quota, Connection Factory, JMS (distributed) Queue or Topic
 - basically can run every WLST script with the flexible WLST define manifest
+- WLST bulk creation
 
 
 Domain creation options (Dev or Prod mode)
@@ -43,6 +44,8 @@ all templates creates a WebLogic domain, logs the domain creation output
 - domain 'osb'         -> OSB + JRF + EM + OWSM 
 - domain 'osb_soa'     -> OSB + SOA Suite + BAM + JRF + EM + OWSM 
 - domain 'osb_soa_bpm' -> OSB + SOA Suite + BAM + BPM + JRF + EM + OWSM 
+- domain 'soa'         -> SOA Suite + BAM + JRF + EM + OWSM 
+- domain 'soa_bpm'     -> SOA Suite + BAM + BPM + JRF + EM + OWSM 
 
 
 Linux low on entropy or urandom fix 
@@ -430,7 +433,7 @@ creates WebLogic a standard | OSB or SOA Suite WebLogic Domain
       weblogic_home_dir          => "/opt/oracle/middleware12c/wlserver",
       middleware_home_dir        => "/opt/oracle/middleware12c",
       jdk_home_dir               => "/usr/java/jdk1.7.0_45",
-      domain_template            => "standard",  #standard|adf|osb|osb_soa|osb_soa_bpm
+      domain_template            => "standard",  #standard|adf|osb|osb_soa|osb_soa_bpm|soa|soa_bpm
       domain_name                => "Wls12c",
       development_mode           => false,
       adminserver_name           => "AdminServer",
@@ -438,7 +441,7 @@ creates WebLogic a standard | OSB or SOA Suite WebLogic Domain
       adminserver_port           => 7001,
       nodemanager_port           => 5556,
       weblogic_user              => "weblogic",
-      weblogic_password          => "welcome1",
+      weblogic_password          => "weblogic1",
       os_user                    => "oracle",
       os_group                   => "dba",
       log_dir                    => "/data/logs",
@@ -456,7 +459,7 @@ or when you set the defaults hiera variables
       adminserver_address        => "localhost",
       adminserver_port           => 7001,
       nodemanager_port           => 5556,
-      weblogic_password          => "welcome1",
+      weblogic_password          => "weblogic1",
       log_output                 => true,
     }                             
 
@@ -486,7 +489,7 @@ vagrantcentos64.example.com.yaml
          adminserver_port:     7001
          nodemanager_port:     5556
          weblogic_user:        "weblogic"
-         weblogic_password:    "welcome1"
+         weblogic_password:    "weblogic1"
          os_user:              "oracle"
          os_group:             "dba"
          log_dir:              "/data/logs"
@@ -505,7 +508,7 @@ or when you set the defaults hiera variables
          adminserver_address:  "localhost"
          adminserver_port:     7001
          nodemanager_port:     5556
-         weblogic_password:    "welcome1"
+         weblogic_password:    "weblogic1"
          log_output:           true
     
 when you just have one WebLogic domain on a server
@@ -517,7 +520,7 @@ when you just have one WebLogic domain on a server
     domain_adminserver_address: "localhost"
     domain_adminserver_port:    7001
     domain_nodemanager_port:    5556
-    domain_wls_password:        "welcome1"
+    domain_wls_password:        "weblogic1"
     
     # create a standard domain
     domain_instances:
@@ -562,7 +565,7 @@ when you just have one WebLogic domain on a server
     domain_adminserver_address: "localhost"
     domain_adminserver_port:    7001
     domain_nodemanager_port:    5556
-    domain_wls_password:        "welcome1"
+    domain_wls_password:        "weblogic1"
     
     # copy domains to other nodes
     copy_instances:
@@ -655,7 +658,7 @@ start or stops the AdminServer,Managed Server or a Cluster of a WebLogic Domain
       weblogic_home_dir          => "/opt/oracle/middleware12c/wlserver",
       jdk_home_dir               => "/usr/java/jdk1.7.0_45",
       weblogic_user              => "weblogic",
-      weblogic_password          => "welcome1",
+      weblogic_password          => "weblogic1",
       adminserver_address        => 'localhost',
       adminserver_port           => 7001,
       nodemanager_port           => 5556,
@@ -674,7 +677,7 @@ or when you set the defaults hiera variables
       target                     => 'Server', # Server|Cluster
       server                     => 'AdminServer',
       action                     => 'start',
-      weblogic_password          => "welcome1",
+      weblogic_password          => "weblogic1",
       adminserver_address        => 'localhost',
       adminserver_port           => 7001,
       nodemanager_port           => 5556,
@@ -703,7 +706,7 @@ vagrantcentos64.example.com.yaml
          weblogic_home_dir     "/opt/oracle/middleware12c/wlserver"
          jdk_home_dir          "/usr/java/jdk1.7.0_45"
          weblogic_user:        "weblogic"
-         weblogic_password:    "welcome1"
+         weblogic_password:    "weblogic1"
          adminserver_address:  'localhost'
          adminserver_port:     7001
          nodemanager_port:     5556
@@ -723,7 +726,7 @@ or when you set the defaults hiera variables
          target:               'Server'
          server:               'AdminServer'
          action:               'start'
-         weblogic_password:    "welcome1"
+         weblogic_password:    "weblogic1"
          adminserver_address:  'localhost'
          adminserver_port:     7001
          nodemanager_port:     5556
@@ -738,7 +741,7 @@ when you just have one WebLogic domain on a server
     domain_adminserver_address: "localhost"
     domain_adminserver_port:    7001
     domain_nodemanager_port:    5556
-    domain_wls_password:        "welcome1"
+    domain_wls_password:        "weblogic1"
     
     
         
@@ -773,7 +776,7 @@ when you set the defaults hiera variables
       domain_name                => "Wls12c",
       adminserver_address        => "localhost",
       adminserver_port           => 7001,
-      weblogic_password          => "welcome1",
+      weblogic_password          => "weblogic1",
       user_config_dir            => '/home/oracle',
       weblogic_password          => undef,
       log_output                 => false,
@@ -796,7 +799,7 @@ or when you set the defaults hiera variables
          domain_name:          "Wls12c"
          adminserver_address:  "localhost"
          adminserver_port:     7001
-         weblogic_password:    "welcome1"
+         weblogic_password:    "weblogic1"
          log_output:           true
          user_config_dir:      '/home/oracle'
 
@@ -807,7 +810,7 @@ when you just have one WebLogic domain on a server
     domain_name:                "Wls1036"
     domain_adminserver_address: "localhost"
     domain_adminserver_port:    7001
-    domain_wls_password:        "welcome1"
+    domain_wls_password:        "weblogic1"
     
     ---
     userconfig_instances:
@@ -822,6 +825,8 @@ execute any WLST script you want
 
 here some WLST examples and the matching Hiera configuration
 
+for bulk insert of WebLogic Objects see orawls::utils::wlstbulk
+
 
 full example
 
@@ -831,7 +836,7 @@ full example
       weblogic_home_dir          => "/opt/oracle/middleware12c/wlserver",
       jdk_home_dir               => "/usr/java/jdk1.7.0_45",
       weblogic_user              => "weblogic",
-      weblogic_password          => "welcome1",
+      weblogic_password          => "weblogic1",
       adminserver_address        => 'localhost',
       adminserver_port           => 7001,
       os_user                    => "oracle",
@@ -984,7 +989,7 @@ when you have just one WebLogic domain on a server
     domain_nodemanager_port:    5556
     
     # provide the password or the user config and key file
-    #domain_wls_password:        "welcome1"
+    #domain_wls_password:        "weblogic1"
     domain_user_config_file:    "/home/oracle/oracle-Wls1036-WebLogicConfig.properties"
     domain_user_key_file:       "/home/oracle/oracle-Wls1036-WebLogicKey.properties"
     
@@ -992,7 +997,7 @@ when you have just one WebLogic domain on a server
 when you have more than one domain on a server and you need to provide these parameters to wlstexec define
 
     # when you have more than one domain on a server
-    domain_1_wls_password:        &domain_1_wls_password         "welcome1"
+    domain_1_wls_password:        &domain_1_wls_password         "weblogic1"
     domain_1_name:                &domain_1_name                 "Wls1036"
     domain_1_adminserver:         &domain_1_adminserver          "AdminServer"
     domain_1_adminserver_address: &domain_1_adminserver_address  "localhost"
@@ -1276,5 +1281,144 @@ create JMS objects ( Queue and a Topic ) in a JMS module
             - "errorObject       = 'ErrorQueue'"
     
 
+###orawls::utils::wlstbulk
+execute any WLST script you want( bulk mode )
+
+requirements
+- need puppet version > 3.2 ( make use of iteration and lambda expressions
+- need to set --parser future ( puppet agent )
+
+use hiera_array, this will search for this entry in all hiera data files
+
+example how to call this wlstbulk define
+
+    $allHieraEntries = hiera_array('jms_module_jms_instances')
+    
+    orawls::utils::wlstbulk{ 'jms_module_jms_instances':
+      entries_array => $allHieraEntries,
+    }
+
+
+possible hiera examples ( use hiera_array )
+
+with global parameters and inside with params
+
+    jms_module_instances:
+      - clusterOne:
+         global_parameters:
+            log_output:           *logoutput
+            weblogic_type:        "jmsmodule"
+            script:               'createJmsModule.py'
+            params:
+               - "jmsModuleName    = 'jmsClusterModule'"
+         jmsClusterModule:
+            weblogic_object_name: "jmsClusterModule"
+            params:
+               - "target           = 'WebCluster'"
+               - "targetType       = 'Cluster'"
+
+with global parameters
+
+    managed_servers_instances:
+      - clusterOne:
+         global_parameters:
+            log_output:           *logoutput
+            weblogic_type:        "server"
+            script:               'createServer.py'
+         wlsServer1_node1:
+            weblogic_object_name: "wlsServer1"
+            params:
+               - "javaArguments    = '-XX:PermSize=256m -XX:MaxPermSize=256m -Xms752m -Xmx752m -Dweblogic.Stdout=/data/logs/wlsServer1.out -Dweblogic.Stderr=/data/logs/wlsServer1_err.out'"
+               - "wlsServerName    = 'wlsServer1'"
+               - "machineName      = 'Node1'"
+               - "listenAddress    = 8001"
+               - "nodeMgrLogDir    = '/data/logs'"
+         wlsServer2_node2:
+            weblogic_object_name: "wlsServer2"
+            params:
+               - "javaArguments    = '-XX:PermSize=256m -XX:MaxPermSize=256m -Xms752m -Xmx752m -Dweblogic.Stdout=/data/logs/wlsServer2.out -Dweblogic.Stderr=/data/logs/wlsServer2_err.out'"
+               - "wlsServerName    = 'wlsServer2'"
+               - "machineName      = 'Node2'"
+               - "listenAddress    = 8001"
+               - "nodeMgrLogDir    = '/data/logs'"
+
+no global parameters
+
+    cluster_instances:
+      - clusterOne:
+         cluster_web:
+            weblogic_object_name: "WebCluster"
+            log_output:           *logoutput
+            weblogic_type:        "cluster"
+            script:               'createCluster.py'
+            params:
+               - "clusterName      = 'WebCluster'"
+               - "clusterNodes     = 'wlsServer1,wlsServer2'"
+
+with empty global parameters
+
+    jms_servers_instances:
+      - clusterOne:
+         global_parameters:
+         jmsServerNode1:
+            log_output:           *logoutput
+            weblogic_type:        "jmsserver"
+            script:               'createJmsServer.py'
+            weblogic_object_name: "jmsServer1"
+            params:
+               - "target           = 'wlsServer1'"
+               - "jmsServerName    = 'jmsServer1'"
+               - "targetType       = 'Server'"
+         jmsServerNode2:
+            log_output:           *logoutput
+            weblogic_type:        "jmsserver"
+            script:               'createJmsServer.py'
+            weblogic_object_name: "jmsServer2"
+            params:
+               - "target           = 'wlsServer2'"
+               - "jmsServerName    = 'jmsServer2'"
+               - "targetType       = 'Server'"
+
+or inside puppet
+
+    $entries_array = 
+     [{  'ClusterOne' => {
+             'global_parameters' => 
+                {
+                 log_output     => true,
+                 weblogic_type  => "jmsobject",
+                 script         => 'createJmsQueueOrTopic.py',
+                 params         => 
+                   [  "subDeploymentName = 'jmsServers'",
+                      "jmsModuleName     = 'jmsClusterModule'",
+                      "distributed       = 'true'",
+                      "balancingPolicy   = 'Round-Robin'",
+                      "useRedirect       = 'true'",
+                      "limit             = '3'",
+                      "policy            = 'Redirect'",
+                      "errorObject       = 'ErrorQueue'",
+                   ],
+               } ,
+             'createJmsQueueforJmsModule1' => 
+                {
+                  weblogic_object_name  => "Queue1",
+                  params                => 
+                    [ "jmsType           = 'queue'",
+                      "jmsName           = 'Queue1'",
+                      "jmsJNDIName       = 'jms/Queue1'",
+                    ],
+                } ,
+              'createJmsQueueforJmsModule2' => 
+                {
+                  weblogic_object_name  => "Queue2",
+                  params                => 
+                    [ "jmsType           = 'queue'",
+                      "jmsName           = 'Queue2'",
+                      "jmsJNDIName       = 'jms/Queue2'",
+                    ],
+               },
+         },
+     },
+    ]
 
 

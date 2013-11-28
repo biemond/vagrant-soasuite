@@ -4,19 +4,21 @@
 # needs the following fiddyspence-sysctl, erwbgy-limits puppet modules
 #
 
+node 'xe11g.example.com' {
+
  
-include os2, oraclexe, orautils
+  include os2, oraclexe, orautils
 
-Class['os2'] -> 
-  Class['oraclexe']
+  Class['os2'] -> 
+    Class['oraclexe']
 
-
+}
 
 
 # operating settings for Database & Middleware
 class os2 {
 
-   group { 'dba' :
+  group { 'dba' :
     ensure => present,
   }
 
@@ -43,31 +45,31 @@ class os2 {
     ensure  => present,
   }
 
-    $remove = [ "java-1.7.0-openjdk.x86_64", "java-1.6.0-openjdk.x86_64" ]
+  $remove = [ "java-1.7.0-openjdk.x86_64", "java-1.6.0-openjdk.x86_64" ]
 
-    package { $remove:
-      ensure  => absent,
-    }
+  package { $remove:
+    ensure  => absent,
+  }
 
-   # $downloadDir = "/data/install"
-   # check oracle install folder
-      file { "/data/install" :
-        ensure        => directory,
-        recurse       => false,
-        replace       => false,
-      }
+  # $downloadDir = "/data/install"
+  # check oracle install folder
+  file { "/data/install" :
+    ensure        => directory,
+    recurse       => false,
+    replace       => false,
+  }
 
-    include jdk7
+  include jdk7
 
-    jdk7::install7{ 'jdk1.7.0_45':
-        version              => "7u45" , 
-        fullVersion          => "jdk1.7.0_45",
-        alternativesPriority => 18000, 
-        x64                  => true,
-        downloadDir          => "/data/install",
-        urandomJavaFix       => true,
-        sourcePath           => "/vagrant",
-      } # end jdk7::install7
+  jdk7::install7{ 'jdk1.7.0_45':
+    version              => "7u45" , 
+    fullVersion          => "jdk1.7.0_45",
+    alternativesPriority => 18000, 
+    x64                  => true,
+    downloadDir          => "/data/install",
+    urandomJavaFix       => true,
+    sourcePath           => "/vagrant",
+  } # end jdk7::install7
 
 
   class { 'limits':
@@ -107,7 +109,6 @@ class os2 {
     user => root,
     creates => "/var/swap.1",
   }
-
  
   exec { "attach swap file":
     command => "/sbin/mkswap /var/swap.1 && /sbin/swapon /var/swap.1",
@@ -116,23 +117,19 @@ class os2 {
     unless => "/sbin/swapon -s | grep /var/swap.1",
   }
 
-
   # add swap file entry to fstab
-    exec {"add swapfile entry to fstab":
-      command => "/bin/echo >>/etc/fstab /var/swap.1 swap swap defaults 0 0",
-      require => Exec["attach swap file"],
-      user => root,
-      unless => "/bin/grep '^/var/swap.1' /etc/fstab 2>/dev/null",
-
+  exec {"add swapfile entry to fstab":
+    command => "/bin/echo >>/etc/fstab /var/swap.1 swap swap defaults 0 0",
+    require => Exec["attach swap file"],
+    user => root,
+    unless => "/bin/grep '^/var/swap.1' /etc/fstab 2>/dev/null",
   }
 
   service { iptables:
-        enable    => false,
-        ensure    => false,
-        hasstatus => true,
+    enable    => false,
+    ensure    => false,
+    hasstatus => true,
   }
-
-  
     
 } # end os2
 
@@ -140,16 +137,16 @@ class os2 {
 
 class oraclexe {
 
-    $downloadDir = "/data/install"
+  $downloadDir = "/data/install"
 
-   if ! defined(File[$downloadDir]) {
-      # check oracle install folder
-      file { $downloadDir :
-        ensure        => directory,
-        recurse       => false,
-        replace       => false,
-      }
+  if ! defined(File[$downloadDir]) {
+    # check oracle install folder
+    file { $downloadDir :
+      ensure        => directory,
+      recurse       => false,
+      replace       => false,
     }
+  }
 
   file { '/vagrant/sql/setUpSQL.sh':
     ensure  => 'present',
@@ -187,11 +184,11 @@ class oraclexe {
 
 
 
-      include oradb
+  include oradb
       
       # RCU runs as root from /data/install 
 
-      oradb::rcu{    'DEV_PS6':
+  oradb::rcu{ 'DEV_PS6':
                      rcuFile          => 'ofm_rcu_linux_11.1.1.7.0_64_disk1_1of1.zip',
                      product          => 'soasuite',
                      version          => '11.1.1.7',
@@ -206,7 +203,8 @@ class oraclexe {
                      schemaPrefix     => 'DEV',
                      reposPassword    => 'oracle',
                      puppetDownloadMntPoint  => '/vagrant',
-    }
+                     require          =>  Exec["UnlockHR"],
+  }
 
 } #end oraclexe
 
