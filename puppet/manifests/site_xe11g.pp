@@ -161,28 +161,37 @@ class oraclexe {
   }
   
   exec { "Configure Oracle XE":
-    command => "/etc/init.d/oracle-xe configure responseFile=/vagrant/xe.rsp >> /tmp/XEsilentinstall.log" ,
-    require => Exec["Install Oracle XE 11g"],
+    command     => "/etc/init.d/oracle-xe configure responseFile=/vagrant/xe.rsp >> /tmp/XEsilentinstall.log" ,
+    subscribe   => Exec["Install Oracle XE 11g"],
+    refreshonly => true,
   }
   
   exec { "SetORACLE_ENVForVagrant":
-    command => "/bin/echo . /u01/app/oracle/product/11.2.0/xe/bin/oracle_env.sh  >> .bashrc" ,
-    require => Exec["Configure Oracle XE"],
-    user    => "vagrant",
+    command     => "/bin/echo . /u01/app/oracle/product/11.2.0/xe/bin/oracle_env.sh  >> .bashrc" ,
+    subscribe   => Exec["Configure Oracle XE"],
+    refreshonly => true,
+    user        => "vagrant",
   }
   
   exec { "AddVagrantToDBAGroup":
-    command => "/usr/sbin/usermod -g dba vagrant",
-    require => Exec["SetORACLE_ENVForVagrant"],
+    command     => "/usr/sbin/usermod -g dba vagrant",
+    subscribe   => Exec["SetORACLE_ENVForVagrant"],
+    refreshonly => true,
   }
   
   exec { "UnlockHR":
-    command => "/vagrant/sql/setUpSQL.sh",
-    require => Exec["AddVagrantToDBAGroup"],
-    user    => "vagrant",
+    command     => "/vagrant/sql/setUpSQL.sh",
+    subscribe   => Exec["AddVagrantToDBAGroup"],
+    user        => "vagrant",
+    refreshonly => true,
   }
 
-
+  exec { "resizeTemp":
+    command     => "/vagrant/sql/setUpTemp.sh",
+    subscribe   => Exec["UnlockHR"],
+    user        => "vagrant",
+    refreshonly => true,
+  }
 
   include oradb
       
@@ -202,6 +211,7 @@ class oraclexe {
                      sysPassword      => 'oracle',
                      schemaPrefix     => 'DEV',
                      reposPassword    => 'oracle',
+                     tempTablespace   => 'TEMP',
                      puppetDownloadMntPoint  => '/vagrant',
                      require          =>  Exec["UnlockHR"],
   }

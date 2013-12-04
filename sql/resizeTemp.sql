@@ -1,0 +1,1 @@
+alter database tempfile '/u01/app/oracle/oradata/XE/temp.dbf' resize 100M;
