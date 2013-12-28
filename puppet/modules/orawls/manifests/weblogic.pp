@@ -11,6 +11,7 @@ class orawls::weblogic (
   $os_group             = undef, # dba
   $download_dir         = undef, # /data/install
   $source               = undef, # puppet:///modules/orawls/ | /mnt | /vagrant
+  $remote_file          = true,                                       # true|false
   $log_output           = false, # true|false
 ) {
 
@@ -67,16 +68,19 @@ class orawls::weblogic (
       log_output           => $log_output,
     }
 
-    # put weblogic generic jar
-    file { "${download_dir}/${filename}":
-      source  => "${mountPoint}/${filename}",
-      ensure  => file,
-      replace => false,
-      backup  => false,
-      mode    => 0775,
-      owner   => $os_user,
-      group   => $os_group,
-      require => Orawls::Utils::Structure["weblogic structure ${version}"],
+    # for performance reasons, download and install or just install it
+    if $remote_file == true {
+      # put weblogic generic jar
+      file { "${download_dir}/${filename}":
+        source  => "${mountPoint}/${filename}",
+        ensure  => file,
+        replace => false,
+        backup  => false,
+        mode    => 0775,
+        owner   => $os_user,
+        group   => $os_group,
+        require => Orawls::Utils::Structure["weblogic structure ${version}"],
+      }
     }
 
     # de xml used by the wls installer
@@ -91,6 +95,17 @@ class orawls::weblogic (
       require => Orawls::Utils::Structure["weblogic structure ${version}"],
     }
 
+    case $::kernel {
+      Linux: {
+        $oraInstPath        = "/etc"
+        $java_statement     = "java"
+       }
+       SunOS: {
+         $oraInstPath       = "/var/opt"
+         $java_statement    = "java -d64"
+       }
+    }
+
     if ($version == 1212) {
       # only necessary for WebLogic >= 1212
       orawls::utils::orainst{"weblogic orainst ${version}":
@@ -99,31 +114,72 @@ class orawls::weblogic (
       }
 
       $command = "-silent -responseFile ${download_dir}/weblogic_silent_install.xml "
-      exec { "install weblogic ${version}":
-        command     => "java -jar ${download_dir}/${filename} ${command} -invPtrLoc /etc/oraInst.loc -ignoreSysPrereqs",
-        environment => ["JAVA_VENDOR=Sun", "JAVA_HOME=${jdk_home_dir}"],
-        timeout     => 0,
-        path        => $exec_path,
-        user        => $os_user,
-        group       => $os_group,
-        require     => [Orawls::Utils::Structure["weblogic structure ${version}"],
-                        Orawls::Utils::Orainst["weblogic orainst ${version}"],
-                        File["${download_dir}/${filename}"],
-                        File["${download_dir}/weblogic_silent_install.xml"]],
+
+      if $remote_file == true {
+        exec { "install weblogic ${version}":
+          command     => "${java_statement} -Xmx1024m -jar ${download_dir}/${filename} ${command} -invPtrLoc ${oraInstPath}/oraInst.loc -ignoreSysPrereqs",
+          environment => ["JAVA_VENDOR=Sun", "JAVA_HOME=${jdk_home_dir}"],
+          timeout     => 0,
+          path        => $exec_path,
+          user        => $os_user,
+          group       => $os_group,
+          require     => [Orawls::Utils::Structure["weblogic structure ${version}"],
+                          Orawls::Utils::Orainst["weblogic orainst ${version}"],
+                          File["${download_dir}/${filename}"],
+                          File["${download_dir}/weblogic_silent_install.xml"]],
+        }
+      } else {
+        exec { "install weblogic ${version}":
+          command     => "${java_statement} -Xmx1024m -jar ${source}/${filename} ${command} -invPtrLoc ${oraInstPath}/oraInst.loc -ignoreSysPrereqs",
+          environment => ["JAVA_VENDOR=Sun", "JAVA_HOME=${jdk_home_dir}"],
+          timeout     => 0,
+          path        => $exec_path,
+          user        => $os_user,
+          group       => $os_group,
+          require     => [Orawls::Utils::Structure["weblogic structure ${version}"],
+                          Orawls::Utils::Orainst["weblogic orainst ${version}"],
+                          File["${download_dir}/weblogic_silent_install.xml"]],
+        }
       }
+      # OPatch native lib fix for 64 solaris
+      case $::kernel {
+        SunOS: {
+          exec { "add -d64 oraparam.ini oracle_common":
+            command => "sed -e's/JRE_MEMORY_OPTIONS=/JRE_MEMORY_OPTIONS=\"-d64\"/g' ${middleware_home_dir}/oui/oraparam.ini > /tmp/wls.tmp && mv /tmp/wls.tmp ${middleware_home_dir}/oui/oraparam.ini",
+            require => Exec["install weblogic ${version}"],
+            path    => $exec_path,
+            user    => $os_user,
+            group   => $os_group,
+          }
+        }
+      }
+
     } else {
 
-      $javaCommand = "java -Xmx1024m -jar"
-      exec {"install weblogic ${version}":
-        command     => "${javaCommand} ${download_dir}/${filename} -mode=silent -silent_xml=${download_dir}/weblogic_silent_install.xml",
-        environment => ["JAVA_VENDOR=Sun","JAVA_HOME=${jdk_home_dir}"],
-        timeout     => 0,
-        path        => $exec_path,
-        user        => $os_user,
-        group       => $os_group,
-        require     => [Orawls::Utils::Structure["weblogic structure ${version}"],
-                        File["${download_dir}/${filename}"],
-                        File["${download_dir}/weblogic_silent_install.xml"]],
+      if $remote_file == true {
+        exec {"install weblogic ${version}":
+          command     => "${java_statement} -Xmx1024m -jar ${download_dir}/${filename} -mode=silent -silent_xml=${download_dir}/weblogic_silent_install.xml",
+          environment => ["JAVA_VENDOR=Sun","JAVA_HOME=${jdk_home_dir}"],
+          timeout     => 0,
+          path        => $exec_path,
+          user        => $os_user,
+          group       => $os_group,
+          require     => [Orawls::Utils::Structure["weblogic structure ${version}"],
+                          File["${download_dir}/${filename}"],
+                          File["${download_dir}/weblogic_silent_install.xml"]],
+        }
+      } else {
+        exec {"install weblogic ${version}":
+          command     => "${java_statement} -Xmx1024m -jar ${source}/${filename} -mode=silent -silent_xml=${download_dir}/weblogic_silent_install.xml",
+          environment => ["JAVA_VENDOR=Sun","JAVA_HOME=${jdk_home_dir}"],
+          timeout     => 0,
+          path        => $exec_path,
+          user        => $os_user,
+          group       => $os_group,
+          require     => [Orawls::Utils::Structure["weblogic structure ${version}"],
+                          File["${download_dir}/weblogic_silent_install.xml"]],
+        }
+
       }
     }
   }

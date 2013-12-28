@@ -10,10 +10,6 @@ node 'admin.example.com' {
   include os,ssh,java,orawls::weblogic,orautils
   include bsu,fmw
   include domains,nodemanager,startwls,userconfig
-  include machines,managed_servers,clusters
-  include jms_servers,file_persistences,jms_modules,jms_module_subdeployments
-  include jms_module_quotas,jms_module_cfs,jms_module_objects_errors,jms_module_objects
-  include pack_domain
 
   Class['java'] -> Class['orawls::weblogic']
 
@@ -26,14 +22,9 @@ class os {
 
   notify { "class os ${operatingsystem}":} 
 
-  host{"node1":
-    ip => "192.168.50.100",
-    host_aliases => ['node1.example.com','node1'],
-  }
-
-  host{"node2":
-    ip => "192.168.50.200",
-    host_aliases => ['node2.example.com','node2'],
+  host{"db":
+    ip => "10.10.10.5",
+    host_aliases => ['db.example.com','db'],
   }
 
   exec { "create swap file":
@@ -238,118 +229,3 @@ class userconfig{
   create_resources('orawls::storeuserconfig',$userconfig_instances, $default_params)
 }	
 
-class machines{
-  require userconfig
-
-  notify { 'class machines':} 
-  $default_params = {}
-  $machines_instances = hiera('machines_instances', [])
-  create_resources('orawls::wlstexec',$machines_instances, $default_params)
-}
-
-class managed_servers{
-  require machines
-
-
-  notify { 'class managed_servers':} 
-  $default_params = {}
-  $managed_servers_instances = hiera('managed_servers_instances', [])
-  create_resources('orawls::wlstexec',$managed_servers_instances, $default_params)
-}
-
-class clusters{
-  require managed_servers
-
-  notify { 'class clusters':} 
-  $default_params = {}
-  $cluster_instances = hiera('cluster_instances', [])
-  create_resources('orawls::wlstexec',$cluster_instances, $default_params)
-}
-
-class file_persistences {
-  require clusters
-
-   notify { 'class file_persistences':} 
-   $default_params = {}
-   $file_persistence_instances = hiera('file_persistence_instances', [])
-   create_resources('orawls::wlstexec',$file_persistence_instances, $default_params)
-
-}
-
-class jms_servers{
-  require file_persistences
-
-  notify { 'class jms_servers':} 
-  $default_params = {}
-  $jms_servers_instances = hiera('jms_servers_instances', [])
-  create_resources('orawls::wlstexec',$jms_servers_instances, $default_params)
-}
-
-class jms_modules{
-  require jms_servers
-
-   notify { 'class jms_modules':} 
-   $default_params = {}
-   $jms_module_instances = hiera('jms_module_instances', [])
-   create_resources('orawls::wlstexec',$jms_module_instances, $default_params)
-}
-
-class jms_module_subdeployments{
-  require jms_modules
-
-   notify { 'class jms_module_subdeployments':} 
-   $default_params = {}
-   $jms_module_subdeployments_instances = hiera('jms_module_subdeployments_instances', [])
-   create_resources('orawls::wlstexec',$jms_module_subdeployments_instances, $default_params)
-}
-
-class jms_module_quotas{
-  require jms_module_subdeployments
-
-
-   notify { 'class jms_module_quotas':} 
-   $default_params = {}
-   $jms_module_quotas_instances = hiera('jms_module_quotas_instances', [])
-   create_resources('orawls::wlstexec',$jms_module_quotas_instances, $default_params)
-
-}
-
-class jms_module_cfs{
-  require jms_module_quotas
-
-
-   notify { 'class jms_module_cfs':} 
-   $default_params = {}
-   $jms_module_cf_instances = hiera('jms_module_cf_instances', [])
-   create_resources('orawls::wlstexec',$jms_module_cf_instances, $default_params)
-
- }
-
-class jms_module_objects_errors{
-  require jms_module_cfs
-
-   notify { 'class jms_module_objects_errors':} 
-   $default_params = {}
-   $jms_module_jms_errors_instances = hiera('jms_module_jms_errors_instances', [])
-   create_resources('orawls::wlstexec',$jms_module_jms_errors_instances, $default_params)
-
- }
-
-
-class jms_module_objects{
-  require jms_module_objects_errors
-
-   notify { 'class jms_module_objects':} 
-   $default_params = {}
-   $jms_module_jms_instances = hiera('jms_module_jms_instances', [])
-   create_resources('orawls::wlstexec',$jms_module_jms_instances, $default_params)
-
- }
-
-class pack_domain{
-  require  jms_module_objects
-  notify { 'class pack_domain':} 
-  $default_params = {}
-  $pack_domain_instances = hiera('pack_domain_instances', [])
-  create_resources('orawls::packdomain',$pack_domain_instances, $default_params)
-}

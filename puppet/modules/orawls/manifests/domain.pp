@@ -26,11 +26,17 @@ define orawls::domain (
   $repository_password        = hiera('repository_password'       , "Welcome01"),
 )
 {
-  $domain_dir = "${middleware_home_dir}/user_projects/domains"
-  $app_dir    = "${middleware_home_dir}/user_projects/applications"
+
+  if $::override_weblogic_domain_folder == undef {
+    $domain_dir = "${middleware_home_dir}/user_projects/domains"
+    $app_dir    = "${middleware_home_dir}/user_projects/applications"
+  } else {
+    $domain_dir = "${::override_weblogic_domain_folder}/domains"
+    $app_dir    = "${::override_weblogic_domain_folder}/applications"
+  }
 
   # check if the domain already exists
-  $found = domain_exists("${domain_dir}/${domain_name}", $version)
+  $found = domain_exists("${domain_dir}/${domain_name}", $version, $domain_dir)
 
   if $found == undef {
     $continue = true
@@ -200,45 +206,64 @@ define orawls::domain (
       group   => $os_group,
     }
 
-    # make the default domain folders
-    if !defined(File["${middleware_home_dir}/user_projects"]) {
+    if $::override_weblogic_domain_folder == undef {
+      # make the default domain folders
+      if !defined(File["weblogic_domain_folder"]) {
+        # check oracle install folder
+        file { "weblogic_domain_folder":
+          path    => "${middleware_home_dir}/user_projects",
+          ensure  => directory,
+          recurse => false,
+          replace => false,
+          mode    => 0775,
+          owner   => $os_user,
+          group   => $os_group,
+        }
+      }
+    } else {
+      # make override domain folders
+
+      if !defined(File["weblogic_domain_folder"]) {
+        # check oracle install folder
+        file { "weblogic_domain_folder":
+          path    => $::override_weblogic_domain_folder,
+          ensure  => directory,
+          recurse => false,
+          replace => false,
+          mode    => 0775,
+          owner   => $os_user,
+          group   => $os_group,
+        }
+      }
+    }
+
+    if !defined(File[$domain_dir]) {
       # check oracle install folder
-      file { "${middleware_home_dir}/user_projects":
+      file { $domain_dir:
         ensure  => directory,
         recurse => false,
         replace => false,
         mode    => 0775,
         owner   => $os_user,
         group   => $os_group,
+        require => File["weblogic_domain_folder"],
       }
     }
 
-    if !defined(File["${middleware_home_dir}/user_projects/domains"]) {
+    if !defined(File[$app_dir]) {
       # check oracle install folder
-      file { "${middleware_home_dir}/user_projects/domains":
-        ensure  => directory,
-        recurse => false,
-        replace => false,
-        require => File["${middleware_home_dir}/user_projects"],
-        mode    => 0775,
-        owner   => $os_user,
-        group   => $os_group,
-      }
-    }
-
-    if !defined(File["${middleware_home_dir}/user_projects/applications"]) {
-      # check oracle install folder
-      file { "${middleware_home_dir}/user_projects/applications":
+      file { $app_dir:
         ensure  => directory,
         recurse => false,
         replace => false,
         mode    => 0775,
         owner   => $os_user,
         group   => $os_group,
-        require => File["${middleware_home_dir}/user_projects"],
+        require => File["weblogic_domain_folder"],
       }
     }
 
+    # create domain
     exec { "execwlst ${domain_name} ${title}":
       command     => "${wlstPath}/wlst.sh ${download_dir}/domain_${domain_name}.py",
       environment => ["JAVA_HOME=${jdk_home_dir}"],
@@ -246,23 +271,62 @@ define orawls::domain (
       creates     => "${domain_dir}/${domain_name}",
       require     => [
         File["domain.py ${domain_name} ${title}"],
-        File["${middleware_home_dir}/user_projects/domains"],
-        File["${middleware_home_dir}/user_projects/applications"]],
+        File[$domain_dir],
+        File[$app_dir]],
       timeout     => 0,
       path        => $exec_path,
       user        => $os_user,
       group       => $os_group,
     }
 
-    exec { "setDebugFlagOnFalse ${domain_name} ${title}":
-      command => "sed -i -e's/debugFlag=\"true\"/debugFlag=\"false\"/g' ${domain_dir}/${domain_name}/bin/setDomainEnv.sh",
-      onlyif  => "/bin/grep debugFlag=\"true\" ${domain_dir}/${domain_name}/bin/setDomainEnv.sh | /usr/bin/wc -l",
-      require => Exec["execwlst ${domain_name} ${title}"],
-      path    => $exec_path,
-      user    => $os_user,
-      group   => $os_group,
-    }
+    if $::kernel == "SunOS" {
 
+      exec { "setDebugFlagOnFalse ${domain_name} ${title}":
+        command => "sed -e's/debugFlag=\"true\"/debugFlag=\"false\"/g' ${domain_dir}/${domain_name}/bin/setDomainEnv.sh > /tmp/domain.tmp && mv /tmp/domain.tmp ${domain_dir}/${domain_name}/bin/setDomainEnv.sh",
+        onlyif  => "/bin/grep debugFlag=\"true\" ${domain_dir}/${domain_name}/bin/setDomainEnv.sh | /usr/bin/wc -l",
+        require => Exec["execwlst ${domain_name} ${title}"],
+        path    => $exec_path,
+        user    => $os_user,
+        group   => $os_group,
+      }
+
+      if ($domain_template == 'osb' or
+          $domain_template == 'osb_soa' or
+          $domain_template == 'osb_soa_bpm'){
+        exec { "setOSBDebugFlagOnFalse ${domain_name} ${title}":
+          command => "sed -e's/ALSB_DEBUG_FLAG=\"true\"/ALSB_DEBUG_FLAG=\"false\"/g' ${domain_dir}/${domain_name}/bin/setDomainEnv.sh > /tmp/domain2.tmp && mv /tmp/domain2.tmp ${domain_dir}/${domain_name}/bin/setDomainEnv.sh",
+          onlyif  => "/bin/grep ALSB_DEBUG_FLAG=\"true\" ${domain_dir}/${domain_name}/bin/setDomainEnv.sh | /usr/bin/wc -l",
+          require => Exec["setDebugFlagOnFalse ${domain_name} ${title}"],
+          path    => $exec_path,
+          user    => $os_user,
+          group   => $os_group,
+        }
+      }
+
+    } else {
+
+      exec { "setDebugFlagOnFalse ${domain_name} ${title}":
+        command => "sed -e's/debugFlag=\"true\"/debugFlag=\"false\"/g' ${domain_dir}/${domain_name}/bin/setDomainEnv.sh",
+        onlyif  => "/bin/grep debugFlag=\"true\" ${domain_dir}/${domain_name}/bin/setDomainEnv.sh | /usr/bin/wc -l",
+        require => Exec["execwlst ${domain_name} ${title}"],
+        path    => $exec_path,
+        user    => $os_user,
+        group   => $os_group,
+      }
+
+      if ($domain_template == 'osb' or
+          $domain_template == 'osb_soa' or
+          $domain_template == 'osb_soa_bpm'){
+        exec { "setOSBDebugFlagOnFalse ${domain_name} ${title}":
+          command => "sed -e's/ALSB_DEBUG_FLAG=\"true\"/ALSB_DEBUG_FLAG=\"false\"/g' ${domain_dir}/${domain_name}/bin/setDomainEnv.sh",
+          onlyif  => "/bin/grep ALSB_DEBUG_FLAG=\"true\" ${domain_dir}/${domain_name}/bin/setDomainEnv.sh | /usr/bin/wc -l",
+          require => Exec["setDebugFlagOnFalse ${domain_name} ${title}"],
+          path    => $exec_path,
+          user    => $os_user,
+          group   => $os_group,
+        }
+      }
+    }
 
     exec { "domain.py ${domain_name} ${title}":
       command => "rm ${download_dir}/domain_${domain_name}.py",

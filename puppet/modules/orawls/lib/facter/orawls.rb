@@ -2,18 +2,72 @@
 require 'rexml/document' 
 require 'facter'
 
+def get_weblogicUser()
+  weblogicUser = Facter.value('override_weblogic_user')
+  if weblogicUser.nil?
+    #puts "weblogic user is oracle"
+  else 
+    #puts "weblogic user is " + weblogicUser
+    return weblogicUser
+  end
+  return "oracle"
+end
+
+def get_domainFolder(mdwHome)
+  domainFolder = Facter.value('override_weblogic_domain_folder')
+  if domainFolder.nil?
+    #puts "domain folder is " + mdwHome + "/user_projects"
+  else 
+    #puts "domain folder is " + domainFolder
+    return domainFolder
+  end
+  return mdwHome+"/user_projects"
+end
+
+def get_suCommand()
+  os = Facter.value(:kernel)
+  if "Linux" == os
+    return "su -l "
+  elsif "SunOS" == os
+    return "su - "
+  end
+  return "su -l "
+end
+
+def get_oraInvPath()
+  os = Facter.value(:kernel)
+  if "Linux" == os
+    return "/etc"
+  elsif "SunOS" == os
+    return "/var/opt"
+  end
+  return "/etc"
+end
+
+def get_userHomePath()
+  os = Facter.value(:kernel)
+  if "Linux" == os
+    return "/home"
+  elsif "SunOS" == os
+    return "/export/home"
+  end
+  return "/home"
+end
+
+def get_javaCommand()
+  os = Facter.value(:kernel)
+  if "Linux" == os
+    return "java"
+  elsif "SunOS" == os
+    return "/usr/java -d64"
+  end
+  return "java"
+end
 
 # read middleware home in the oracle home folder
 def get_homes()
 
-  os = Facter.value(:kernel)
-  weblogicUser = "oracle"
-
-  if ["Linux"].include?os
-    beafile = "/home/"+weblogicUser+"/bea/beahomelist"
-  else
-    return nil 
-  end
+  beafile = get_userHomePath()+"/"+get_weblogicUser()+"/bea/beahomelist"
 
   if FileTest.exists?(beafile)
     output = File.read(beafile)
@@ -31,9 +85,9 @@ end
 def get_bsu_patches(name)
   os = Facter.value(:kernel)
 
-  if ["Linux"].include?os
+  if ["Linux","SunOS"].include?os
    if FileTest.exists?(name+'/utils/bsu/patch-client.jar')
-    output2 = Facter::Util::Resolution.exec("su -l oracle -c \"java -Xms256m -Xmx512m -jar "+ name+"/utils/bsu/patch-client.jar -report -bea_home="+name+" -output_format=xml\"")
+    output2 = Facter::Util::Resolution.exec(get_suCommand()+ get_weblogicUser() + " -c \""+get_javaCommand()+" -Xms256m -Xmx512m -jar "+ name+"/utils/bsu/patch-client.jar -report -bea_home="+name+" -output_format=xml\"")
     if output2.nil?
       return "empty"
     end
@@ -56,13 +110,9 @@ end
 
 
 def get_opatch_patches(name)
-
-    os = Facter.value(:kernel)
-    weblogicUser = "oracle"
-
-    if ["Linux"].include?os
-      output3 = Facter::Util::Resolution.exec("su -l "+weblogicUser+" -c \""+name+"/OPatch/opatch lsinventory -patch_id -oh "+name+" -invPtrLoc /etc/oraInst.loc\"")
-    end
+    puts "get_opatch_patches with path: "+name
+    #puts "opatch command: "+get_suCommand()+get_weblogicUser()+" -c '"+name+"/OPatch/opatch lsinventory -patch_id -oh "+name+" -invPtrLoc "+get_oraInvPath()+"/oraInst.loc'"
+    output3 = Facter::Util::Resolution.exec(get_suCommand()+get_weblogicUser()+" -c '"+name+"/OPatch/opatch lsinventory -patch_id -oh "+name+" -invPtrLoc "+get_oraInvPath()+"/oraInst.loc'")
 
     opatches = "Patches;"
     if output3.nil?
@@ -77,6 +127,7 @@ def get_opatch_patches(name)
 end  
 
 def get_middleware_1212_Home(name)
+    #puts "vars: "+ get_suCommand()+" "+get_weblogicUser()+" "+get_oraInvPath()+" "+get_userHomePath()
 
     elements = [] 
     name.split(/;/).each_with_index{ |element, index|  
@@ -89,24 +140,23 @@ end
 
 
 def get_orainst_loc()
-  os = Facter.value(:kernel)
-  if ["Linux"].include?os
-    if FileTest.exists?("/etc/oraInst.loc")
-      str = ""
-      output = File.read("/etc/oraInst.loc")
-      output.split(/\r?\n/).each do |item|
-        if item.match(/^inventory_loc/)
-          str = item[14,50]
-        end
+  puts "get_orainst_loc: "+get_oraInvPath()+"/oraInst.loc"
+  if FileTest.exists?(get_oraInvPath()+"/oraInst.loc")
+    str = ""
+    output = File.read(get_oraInvPath()+"/oraInst.loc")
+    output.split(/\r?\n/).each do |item|
+      if item.match(/^inventory_loc/)
+        str = item[14,50]
       end
-      return str
-    else
-      return "NotFound"
     end
+    return str
+  else
+    return "NotFound"
   end
 end
 
 def get_orainst_products(path)
+  puts "get_orainst_products with path: "+path
   unless path.nil?
     if FileTest.exists?(path+"/ContentsXML/inventory.xml")
       file = File.read( path+"/ContentsXML/inventory.xml" )
@@ -157,10 +207,10 @@ def get_domain(name,i,wlsversion)
   
   os = Facter.value(:kernel)
 
-  if ["Linux"].include?os
+  if ["Linux","SunOS"].include?os
 
-    if FileTest.exists?(name+'/user_projects/domains')
-      output2 = Facter::Util::Resolution.exec('/bin/ls '+name+'/user_projects/domains')
+    if FileTest.exists?( get_domainFolder(name)+'/domains')
+      output2 = Facter::Util::Resolution.exec('/bin/ls '+get_domainFolder(name)+'/domains')
       if output2.nil?
         Facter.add("#{prefix}_domain_cnt") do
           setcode do
@@ -186,8 +236,8 @@ def get_domain(name,i,wlsversion)
 
   output2.split(/\r?\n/).each_with_index do |domain, n|
 
-    if ["Linux"].include?os
-      domainfile = name+'/user_projects/domains/'+domain+'/config/config.xml'
+    if ["Linux","SunOS"].include?os
+      domainfile = get_domainFolder(name)+'/domains/'+domain+'/config/config.xml'
 
     end
 
@@ -298,9 +348,28 @@ def get_domain(name,i,wlsversion)
          end
       end
             
+      bpmTargets  = nil
+      soaTargets  = nil
+      osbTargets  = nil
+      bamTargets  = nil
+
       deployments = ""
       root.elements.each("app-deployment[module-type = 'ear']") do |apps|
-        deployments += apps.elements['name'].text + ";"
+        earName = apps.elements['name'].text
+        deployments += earName + ";"
+
+        if earName == "BPMComposer" 
+           bpmTargets = apps.elements['target'].text
+        end 
+        if earName == "soa-infra" 
+           soaTargets = apps.elements['target'].text
+        end 
+        if earName == "oracle-bam#11.1.1" 
+           bamTargets = apps.elements['target'].text
+        end         
+        if earName == "ALSB Domain Singleton Marker Application" 
+           osbTargets = apps.elements['target'].text
+        end  
       end
 
       Facter.add("#{prefix}_domain_#{n}_deployments") do
@@ -308,6 +377,59 @@ def get_domain(name,i,wlsversion)
             deployments
          end
       end
+
+      unless bpmTargets.nil?
+        Facter.add("#{prefix}_domain_#{n}_bpm") do
+          setcode do
+            bpmTargets
+          end
+        end
+      else
+        Facter.add("#{prefix}_domain_#{n}_bpm") do
+          setcode do
+            "NotFound"
+          end
+        end
+      end  
+      unless soaTargets.nil?
+        Facter.add("#{prefix}_domain_#{n}_soa") do
+          setcode do
+            soaTargets
+          end
+        end
+      else
+        Facter.add("#{prefix}_domain_#{n}_soa") do
+          setcode do
+            "NotFound"
+          end
+        end
+      end
+      unless bamTargets.nil?
+        Facter.add("#{prefix}_domain_#{n}_bam") do
+          setcode do
+            bamTargets
+          end
+        end
+      else
+        Facter.add("#{prefix}_domain_#{n}_bam") do
+          setcode do
+            "NotFound"
+          end
+        end
+      end
+      unless osbTargets.nil?
+        Facter.add("#{prefix}_domain_#{n}_osb") do
+          setcode do
+            osbTargets
+          end
+        end
+      else
+        Facter.add("#{prefix}_domain_#{n}_osb") do
+          setcode do
+            "NotFound"
+          end
+        end
+      end                  
 
       fileAdapterPlan = ""
       fileAdapterPlanEntries = ""
@@ -511,7 +633,7 @@ def get_domain(name,i,wlsversion)
       end
 
       safagents = ""
-      root.elements.each("jdbc-store") do |agent|
+      root.elements.each("saf-agent") do |agent|
         safagents += agent.elements['name'].text + ";"
       end
 
@@ -549,9 +671,13 @@ def get_domain(name,i,wlsversion)
           end
         end
 
-
-
-        subfile = File.read( name+'/user_projects/domains/'+domain+"/config/" + jmsresource.elements['descriptor-file-name'].text )
+        unless jmsresource.elements['descriptor-file-name'].nil?
+          fileJms = jmsresource.elements['descriptor-file-name'].text
+        else
+          fileJms = "jms/"+jmsresource.elements['name'].text.downcase + "-jms.xml"
+        end  
+ 
+        subfile = File.read( get_domainFolder(name)+'/domains/'+domain+"/config/" + fileJms )
         subdoc = REXML::Document.new subfile
 
         jmsroot = subdoc.root
@@ -566,6 +692,38 @@ def get_domain(name,i,wlsversion)
             jmsmoduleQuotaStr
           end
         end
+
+        jmsmoduleForeingServerStr = "" 
+        jmsroot.elements.each("foreign-server") do |fs|
+          fsName = fs.attributes["name"] 
+          jmsmoduleForeingServerStr +=  fsName + ";"
+
+          jmsmoduleForeignServerObjectsStr = "" 
+          fs.elements.each("foreign-destination") do |cf| 
+            jmsmoduleForeignServerObjectsStr +=  cf.attributes["name"] + ";"
+          end 
+          fs.elements.each("foreign-connection-factory") do |dest| 
+            jmsmoduleForeignServerObjectsStr +=  dest.attributes["name"] + ";"
+          end 
+
+          Facter.add("#{prefix}_domain_#{n}_jmsmodule_#{k}_foreign_server_#{fsName}_objects") do
+            setcode do
+              jmsmoduleForeignServerObjectsStr
+            end
+          end
+
+          #puts "#{prefix}_domain_#{n}_jmsmodule_#{k}_foreign_server_#{fsName}_objects"
+          #puts "values "+jmsmoduleForeignServerObjectsStr
+        end
+
+        Facter.add("#{prefix}_domain_#{n}_jmsmodule_#{k}_foreign_servers") do
+          setcode do
+            jmsmoduleForeingServerStr
+          end
+        end
+        #puts "#{prefix}_domain_#{n}_jmsmodule_#{k}_foreign_servers"
+        #puts "values "+jmsmoduleForeingServerStr
+
 
 
         jmsroot.elements.each("connection-factory") do |cfs| 
@@ -641,7 +799,7 @@ end
 mdw11gHomes = get_homes
 inventory   = get_orainst_loc
 inventory2  = get_orainst_products(inventory)
-mdw12gHomes = get_middleware_1212_Home(inventory2)
+mdw12cHomes = get_middleware_1212_Home(inventory2)
 
 # report all oracle homes / domains
 unless mdw11gHomes.nil?
@@ -670,9 +828,9 @@ unless mdw11gHomes.nil?
 end
 
 # all homes on 1 row
-unless mdw12gHomes.nil?
+unless mdw12cHomes.nil?
   str = ""
-  mdw12gHomes.each do |item|
+  mdw12cHomes.each do |item|
     str += item + ";"
   end 
   Facter.add("ora_mdw_1212_homes") do
@@ -683,8 +841,8 @@ unless mdw12gHomes.nil?
 end
 
 # report all oracle homes / domains
-unless mdw12gHomes.nil?
-  mdw12gHomes.each_with_index do |mdw, i|
+unless mdw12cHomes.nil?
+  mdw12cHomes.each_with_index do |mdw, i|
     Facter.add("ora_mdw_1212_#{i}") do
       setcode do
         mdw
@@ -713,7 +871,6 @@ Facter.add("ora_mdw_cnt") do
   unless mdw11gHomes.nil?
     count = mdw11gHomes.count
   end
-
   setcode do
     count
   end
@@ -722,10 +879,9 @@ end
 # all 12c home counter
 Facter.add("ora_mdw_1212_cnt") do
   count = 0
-  unless mdw12gHomes.nil?
-    count = mdw12gHomes.count
+  unless mdw12cHomes.nil?
+    count = mdw12cHomes.count
   end
-
   setcode do
     count
   end
@@ -745,5 +901,3 @@ Facter.add("ora_inst_products") do
     inventory2
   end
 end
-
-
