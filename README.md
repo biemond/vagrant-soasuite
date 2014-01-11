@@ -3,6 +3,11 @@ vagrant-soasuite
 
 Oracle SOA Suite PS6 domain with a 12c database with RCU
 
+Add the all the Oracle binaris to /software, edit Vagrantfile and update
+- admin.vm.synced_folder "/Users/edwin/software", "/software"
+- db.vm.synced_folder "/Users/edwin/software", "/software"
+
+
 steps:
 - vagrant up db
 - vagrant up admin

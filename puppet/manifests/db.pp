@@ -66,9 +66,6 @@ class os {
   sysctl { 'net.core.wmem_default':         ensure => 'present', permanent => 'yes', value => '262144',}
   sysctl { 'net.core.wmem_max':             ensure => 'present', permanent => 'yes', value => '1048576',}
 
-
-
-
 }
 
 class db12c {
@@ -86,7 +83,7 @@ class db12c {
             group                  => 'dba',
             downloadDir            => '/install',
             remoteFile             => false,
-            puppetDownloadMntPoint => "/vagrant",  
+            puppetDownloadMntPoint => "/software",  
     }
 
    oradb::net{ 'config net8':
@@ -162,7 +159,7 @@ class db12c {
                  schemaPrefix     => 'DEV',
                  reposPassword    => 'Welcome01',
                  tempTablespace   => 'TEMP',
-                 puppetDownloadMntPoint => '/vagrant',
+                 puppetDownloadMntPoint => '/software',
                  remoteFile       => false,
                  logoutput        => true,
                  require          => Oradb::Dbactions['start testDb'],

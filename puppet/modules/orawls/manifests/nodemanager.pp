@@ -31,7 +31,6 @@ define orawls::nodemanager (
   } else {
     $nodeMgrHome = "${weblogic_home_dir}/common/nodemanager"
   }
-
   $exec_path    = "${jdk_home_dir}/bin:/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin:"
 
   if $log_dir == undef {

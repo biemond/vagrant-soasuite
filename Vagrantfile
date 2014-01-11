@@ -14,6 +14,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     # admin.vm.network :forwarded_port, guest: 80, host: 8888 ,auto_correct: true
     # admin.vm.network :forwarded_port, guest: 7001, host: 7001, auto_correct: false
     admin.vm.synced_folder ".", "/vagrant", :mount_options => ["dmode=777","fmode=777"]
+    admin.vm.synced_folder "/Users/edwin/software", "/software"
   
     admin.vm.network :private_network, ip: "10.10.10.10"
   
@@ -45,6 +46,9 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
     db.vm.hostname = "db.example.com"
     db.vm.synced_folder ".", "/vagrant", :mount_options => ["dmode=777","fmode=777"]
+    db.vm.synced_folder "/Users/edwin/software", "/software"
+
+
     db.vm.network :private_network, ip: "10.10.10.5"
   
     db.vm.provider :virtualbox do |vb|
