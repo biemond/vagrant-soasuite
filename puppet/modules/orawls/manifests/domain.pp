@@ -13,6 +13,7 @@ define orawls::domain (
   $adminserver_name           = hiera('domain_adminserver'        , "AdminServer"),
   $adminserver_address        = hiera('domain_adminserver_address', "localhost"),
   $adminserver_port           = hiera('domain_adminserver_port'   , 7001),
+  $java_arguments             = hiera('java_arguments', {}),               # java_arguments = { "ADM" => "...", "OSB" => "...", "SOA" => "...", "BAM" => "..."}
   $nodemanager_port           = hiera('domain_nodemanager_port'   , 5556),
   $weblogic_user              = hiera('wls_weblogic_user'         , "weblogic"),
   $weblogic_password          = hiera('domain_wls_password'       , undef),
@@ -281,18 +282,20 @@ define orawls::domain (
 
     if $::kernel == "SunOS" {
 
-      exec { "setDebugFlagOnFalse ${domain_name} ${title}":
-        command => "sed -e's/debugFlag=\"true\"/debugFlag=\"false\"/g' ${domain_dir}/${domain_name}/bin/setDomainEnv.sh > /tmp/domain.tmp && mv /tmp/domain.tmp ${domain_dir}/${domain_name}/bin/setDomainEnv.sh",
-        onlyif  => "/bin/grep debugFlag=\"true\" ${domain_dir}/${domain_name}/bin/setDomainEnv.sh | /usr/bin/wc -l",
-        require => Exec["execwlst ${domain_name} ${title}"],
-        path    => $exec_path,
-        user    => $os_user,
-        group   => $os_group,
-      }
 
       if ($domain_template == 'osb' or
           $domain_template == 'osb_soa' or
           $domain_template == 'osb_soa_bpm'){
+
+	      exec { "setDebugFlagOnFalse ${domain_name} ${title}":
+	        command => "sed -e's/debugFlag=\"true\"/debugFlag=\"false\"/g' ${domain_dir}/${domain_name}/bin/setDomainEnv.sh > /tmp/domain.tmp && mv /tmp/domain.tmp ${domain_dir}/${domain_name}/bin/setDomainEnv.sh",
+	        onlyif  => "/bin/grep debugFlag=\"true\" ${domain_dir}/${domain_name}/bin/setDomainEnv.sh | /usr/bin/wc -l",
+	        require => Exec["execwlst ${domain_name} ${title}"],
+	        path    => $exec_path,
+	        user    => $os_user,
+	        group   => $os_group,
+	      }
+
         exec { "setOSBDebugFlagOnFalse ${domain_name} ${title}":
           command => "sed -e's/ALSB_DEBUG_FLAG=\"true\"/ALSB_DEBUG_FLAG=\"false\"/g' ${domain_dir}/${domain_name}/bin/setDomainEnv.sh > /tmp/domain2.tmp && mv /tmp/domain2.tmp ${domain_dir}/${domain_name}/bin/setDomainEnv.sh",
           onlyif  => "/bin/grep ALSB_DEBUG_FLAG=\"true\" ${domain_dir}/${domain_name}/bin/setDomainEnv.sh | /usr/bin/wc -l",
@@ -305,20 +308,22 @@ define orawls::domain (
 
     } else {
 
-      exec { "setDebugFlagOnFalse ${domain_name} ${title}":
-        command => "sed -e's/debugFlag=\"true\"/debugFlag=\"false\"/g' ${domain_dir}/${domain_name}/bin/setDomainEnv.sh",
-        onlyif  => "/bin/grep debugFlag=\"true\" ${domain_dir}/${domain_name}/bin/setDomainEnv.sh | /usr/bin/wc -l",
-        require => Exec["execwlst ${domain_name} ${title}"],
-        path    => $exec_path,
-        user    => $os_user,
-        group   => $os_group,
-      }
 
       if ($domain_template == 'osb' or
           $domain_template == 'osb_soa' or
           $domain_template == 'osb_soa_bpm'){
+
+	      exec { "setDebugFlagOnFalse ${domain_name} ${title}":
+	        command => "sed -i -e's/debugFlag=\"true\"/debugFlag=\"false\"/g' ${domain_dir}/${domain_name}/bin/setDomainEnv.sh",
+	        onlyif  => "/bin/grep debugFlag=\"true\" ${domain_dir}/${domain_name}/bin/setDomainEnv.sh | /usr/bin/wc -l",
+	        require => Exec["execwlst ${domain_name} ${title}"],
+	        path    => $exec_path,
+	        user    => $os_user,
+	        group   => $os_group,
+	      }
+
         exec { "setOSBDebugFlagOnFalse ${domain_name} ${title}":
-          command => "sed -e's/ALSB_DEBUG_FLAG=\"true\"/ALSB_DEBUG_FLAG=\"false\"/g' ${domain_dir}/${domain_name}/bin/setDomainEnv.sh",
+          command => "sed -i -e's/ALSB_DEBUG_FLAG=\"true\"/ALSB_DEBUG_FLAG=\"false\"/g' ${domain_dir}/${domain_name}/bin/setDomainEnv.sh",
           onlyif  => "/bin/grep ALSB_DEBUG_FLAG=\"true\" ${domain_dir}/${domain_name}/bin/setDomainEnv.sh | /usr/bin/wc -l",
           require => Exec["setDebugFlagOnFalse ${domain_name} ${title}"],
           path    => $exec_path,
